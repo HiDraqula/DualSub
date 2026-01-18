@@ -40,17 +40,17 @@ let status = {
 let checkInterval = null;
 
 // Remove CORS headers
-chrome.webRequest.onHeadersReceived.addListener(
-  function(details) {
-    return {
-      responseHeaders: details.responseHeaders.filter(header => 
-        !['content-security-policy', 'x-frame-options'].includes(header.name.toLowerCase())
-      )
-    };
-  },
-  { urls: ["*://net20.cc/*"] },
-  ["blocking", "responseHeaders"]
-);
+// chrome.webRequest.onHeadersReceived.addListener(
+//   function(details) {
+//     return {
+//       responseHeaders: details.responseHeaders.filter(header => 
+//         !['content-security-policy', 'x-frame-options'].includes(header.name.toLowerCase())
+//       )
+//     };
+//   },
+//   { urls: ["*://net20.cc/*"] },
+//   ["blocking", "responseHeaders"]
+// );
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "getStatus") {

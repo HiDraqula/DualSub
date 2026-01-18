@@ -21,8 +21,6 @@
   "permissions": [
     "activeTab",
     "storage",
-    "webRequest",
-    "webRequestBlocking",
     "downloads"
   ],
   "host_permissions": [
@@ -33,9 +31,5 @@
       "resources": ["iframe-subs.js"],
       "matches": ["https://net20.cc/*"]
     }
-  ],
-  "icons": {
-    "48": "icon48.png",
-    "128": "icon128.png"
-  }
+  ]
 }
