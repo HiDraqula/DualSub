@@ -5,75 +5,23 @@
   <style>
     * { box-sizing: border-box; }
     body { 
-      width: 360px; 
-      padding: 15px; 
-      margin: 0; 
+      width: 360px; padding: 15px; margin: 0; 
       font-family: -apple-system, Segoe UI, sans-serif; 
-      font-size: 13px; 
-      line-height: 1.4;
+      font-size: 13px; line-height: 1.4;
     }
-    h3 { 
-      margin: 0 0 20px 0; 
-      text-align: center; 
-      font-size: 18px; 
-      font-weight: 600;
-      color: #333;
-    }
-    .status { 
-      padding: 12px; 
-      margin: 8px 0; 
-      border-radius: 8px; 
-      font-weight: 600; 
-      text-align: center;
-    }
+    h3 { margin: 0 0 20px 0; text-align: center; font-size: 18px; font-weight: 600; color: #333; }
+    .status { padding: 12px; margin: 8px 0; border-radius: 8px; font-weight: 600; text-align: center; }
     .active { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
     .ready { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
-    .debug-info { 
-      background: #f8f9fa; 
-      padding: 12px; 
-      border-radius: 8px; 
-      font-size: 12px; 
-      margin: 12px 0;
-    }
-    button { 
-      width: 100%; 
-      padding: 12px; 
-      margin: 6px 0; 
-      border: none; 
-      border-radius: 8px; 
-      font-weight: 600; 
-      cursor: pointer; 
-      font-size: 14px;
-    }
+    .scan { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+    .debug-info { background: #f8f9fa; padding: 12px; border-radius: 8px; font-size: 12px; margin: 12px 0; }
+    button { width: 100%; padding: 12px; margin: 6px 0; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px; }
     .toggle-on { background: #28a745; color: white; }
     .toggle-off { background: #6c757d; color: white; }
     .debug-btn { background: #007bff; color: white; }
-    .log { 
-      background: #343a40; 
-      color: #e9ecef; 
-      padding: 12px; 
-      font-size: 11px; 
-      border-radius: 8px; 
-      max-height: 140px; 
-      overflow-y: auto; 
-      white-space: pre-wrap;
-      font-family: 'Courier New', monospace;
-    }
-    .track-select { 
-      display: flex; 
-      gap: 8px; 
-      margin: 12px 0;
-    }
-    .track-btn { 
-      flex: 1; 
-      padding: 12px; 
-      text-align: center; 
-      background: #f8f9fa; 
-      border: 1px solid #dee2e6; 
-      font-size: 13px;
-      cursor: pointer;
-      border-radius: 8px;
-    }
+    .log { background: #343a40; color: #e9ecef; padding: 12px; font-size: 11px; border-radius: 8px; max-height: 140px; overflow-y: auto; white-space: pre-wrap; font-family: 'Courier New', monospace; }
+    .track-select { display: flex; gap: 8px; margin: 12px 0; }
+    .track-btn { flex: 1; padding: 12px; text-align: center; background: #f8f9fa; border: 1px solid #dee2e6; font-size: 13px; cursor: pointer; border-radius: 8px; }
     .track-btn:hover { background: #e9ecef; }
   </style>
 </head>
@@ -90,8 +38,8 @@
   </div>
   
   <div class="track-select">
-    <div id="track1" class="track-btn">Track 1: None</div>
-    <div id="track2" class="track-btn">Track 2: None</div>
+    <div id="track1" class="track-btn">Track 1: None (click)</div>
+    <div id="track2" class="track-btn">Track 2: None (click)</div>
   </div>
   
   <button id="scanDeep" class="debug-btn">Deep Scan Iframes</button>
@@ -104,177 +52,3 @@
   <script src="popup.js"></script>
 </body>
 </html>
-
-<!-- <!DOCTYPE html>
-<html>
-<head>
-  <style>
-    body { width: 360px; padding: 15px; font-family: -apple-system, system-ui; margin: 0; }
-    .status { padding: 12px; margin: 8px 0; border-radius: 8px; font-weight: 600; }
-    .active { background: rgba(40,167,69,0.2); color: #155724; border: 1px solid #28a745; }
-    .ready { background: rgba(0,123,255,0.2); color: #004085; border: 1px solid #007bff; }
-    .debug-info { background: rgba(0,0,0,0.05); padding: 12px; border-radius: 6px; font-size: 13px; margin: 8px 0; }
-    button { width: 100%; padding: 12px; margin: 6px 0; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px; }
-    .toggle-on { background: linear-gradient(135deg, #28a745, #20c997); color: white; }
-    .toggle-off { background: #6c757d; color: white; }
-    .debug-btn { background: #007bff; color: white; }
-    .debug-btn:hover { background: #0056b3; }
-    .log { background: #f8f9fa; padding: 10px; font-size: 12px; border-radius: 6px; max-height: 120px; overflow-y: auto; white-space: pre-wrap; }
-  </style>
-</head>
-<body>
-  <h3 style="margin: 0 0 20px 0; text-align: center;">Dual Subs</h3>
-  
-  <div id="status" class="status ready">Loading...</div>
-  <div id="debugInfo" class="debug-info" style="display: none;">
-    <strong>DOM:</strong> <span id="domScan">-</span><br>
-    <strong>Iframes:</strong> <span id="iframeCount">0</span> | 
-    <strong>Videos:</strong> <span id="videoCount">0</span>
-  </div>
-  
-  <div style="display: flex; gap: 8px; margin: 12px 0;">
-    <div id="track1" class="status ready" style="flex: 1; padding: 10px; text-align: center; font-size: 13px;">Select 1st</div>
-    <div id="track2" class="status ready" style="flex: 1; padding: 10px; text-align: center; font-size: 13px;">Select 2nd</div>
-  </div>
-  
-  <button id="scanDeep" class="debug-btn">🔍 Deep Scan</button>
-  <button id="exportHtml" class="debug-btn">📄 Export HTML</button>
-  <button id="toggle" class="toggle-off">Enable Dual Subs</button>
-  
-  <div id="logs" class="log">Click Deep Scan to analyze page...</div>
-  
-  <script src="popup.js"></script>
-</body>
-</html> -->
-
-
-<!-- //////////////////// -->
-
-<!-- 
-<!DOCTYPE html>
-<html>
-<head>
-  <style>
-    body { width: 380px; padding: 15px; font-family: -apple-system, system-ui; margin: 0; }
-    .status { padding: 10px; margin: 8px 0; border-radius: 8px; font-weight: 600; }
-    .active { background: rgba(40,167,69,0.2); color: #155724; border: 1px solid #28a745; }
-    .ready { background: rgba(0,123,255,0.2); color: #004085; border: 1px solid #007bff; }
-    .video-info, .debug-info { background: rgba(0,0,0,0.05); padding: 10px; border-radius: 6px; font-size: 12px; margin: 8px 0; }
-    .tracks-list, .html-preview { max-height: 180px; overflow-y: auto; margin: 10px 0; }
-    .track-item, .html-line { padding: 6px 8px; margin: 2px 0; border-radius: 4px; cursor: pointer; background: rgba(0,0,0,0.03); font-size: 11px; }
-    .track-item:hover, .html-line:hover { background: rgba(0,123,255,0.1); }
-    button { width: 100%; padding: 10px; margin: 6px 0; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 13px; }
-    .toggle-on { background: linear-gradient(135deg, #28a745, #20c997); color: white; }
-    .toggle-off, .debug-btn { background: #6c757d; color: white; }
-    .debug-btn:hover { background: #5a6268; }
-    .log { background: #f8f9fa; padding: 8px; font-size: 10px; border-radius: 6px; max-height: 80px; overflow-y: auto; }
-    .tab-buttons { display: flex; gap: 4px; margin-bottom: 10px; }
-    .tab-btn { flex: 1; padding: 8px; border: none; border-radius: 6px 6px 0 0; background: #e9ecef; cursor: pointer; font-size: 12px; }
-    .tab-btn.active { background: #007bff; color: white; }
-    .tab-content { display: none; }
-    .tab-content.active { display: block; }
-  </style>
-</head>
-<body>
-  <h3 style="margin: 0 0 15px 0; text-align: center;">🅳🆄🅰🅻 🆂🆄🅱🆂</h3>
-  
-  <div class="tab-buttons">
-    <button class="tab-btn active" onclick="switchTab('status')">Status</button>
-    <button class="tab-btn" onclick="switchTab('debug')">Debug</button>
-  </div>
-  
-  <div id="statusTab" class="tab-content active">
-    <div id="status" class="status ready">Loading...</div>
-    <div id="videoInfo" class="video-info" style="display: none;"></div>
-    
-    <div style="display: flex; gap: 8px; margin-bottom: 12px;">
-      <div id="track1" class="track-item" style="flex: 1;">Select 1st</div>
-      <div id="track2" class="track-item" style="flex: 1;">Select 2nd</div>
-    </div>
-    
-    <div id="tracksList" class="tracks-list" style="display: none;"></div>
-    <button id="toggle" class="toggle-off">Enable Dual Subs</button>
-  </div>
-  
-  <div id="debugTab" class="tab-content">
-    <div class="debug-info">
-      <strong>DOM Scan:</strong> <span id="domScan">Scanning...</span><br>
-      <strong>Iframes:</strong> <span id="iframeCount">0</span><br>
-      <strong>Video tags:</strong> <span id="videoCount">0</span>
-    </div>
-    <button id="exportHtml" class="debug-btn">📄 Export HTML</button>
-    <button id="scanDeep" class="debug-btn">🔍 Deep Scan</button>
-    <div id="htmlPreview" class="html-preview" style="display: none; background: #1e1e1e; color: #d4d4d4; font-family: monospace;"></div>
-  </div>
-  
-  <div id="logs" class="log">Ready to scan...</div>
-  
-  <script src="popup.js"></script>
-</body>
-</html> -->
-
-<!--  -->
-<!-- <!DOCTYPE html>
-<html>
-<head>
-  <style>
-    body { width: 350px; padding: 15px; font-family: -apple-system, system-ui; margin: 0; }
-    .status { padding: 10px; margin: 8px 0; border-radius: 8px; font-weight: 600; }
-    .active { background: rgba(40,167,69,0.2); color: #155724; border: 1px solid #28a745; }
-    .ready { background: rgba(0,123,255,0.2); color: #004085; border: 1px solid #007bff; }
-    .video-info { background: rgba(0,0,0,0.05); padding: 10px; border-radius: 6px; font-size: 13px; margin: 8px 0; }
-    .tracks-list { max-height: 200px; overflow-y: auto; margin: 10px 0; }
-    .track-item { display: flex; align-items: center; padding: 8px; margin: 4px 0; border-radius: 6px; cursor: pointer; background: rgba(0,0,0,0.03); }
-    .track-item:hover { background: rgba(0,123,255,0.1); }
-    .track-item.active { background: rgba(40,167,69,0.2); border: 1px solid #28a745; }
-    .track-flag { width: 24px; margin-right: 8px; }
-    button { width: 100%; padding: 12px; margin: 8px 0; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; }
-    .toggle-on { background: linear-gradient(135deg, #28a745, #20c997); color: white; }
-    .toggle-off { background: #6c757d; color: white; }
-    .log { background: #f8f9fa; padding: 8px; font-size: 11px; border-radius: 6px; max-height: 100px; overflow-y: auto; }
-  </style>
-</head>
-<body>
-  <h3 style="margin: 0 0 15px 0; text-align: center;">🅳🆄🅰🅻 🆂🆄🅱🆂</h3>
-  
-  <div id="status" class="status ready">Loading...</div>
-  <div id="videoInfo" class="video-info" style="display: none;"></div>
-  
-  <div style="display: flex; gap: 8px; margin-bottom: 12px;">
-    <div id="track1" class="track-item" style="flex: 1;">Select German</div>
-    <div id="track2" class="track-item" style="flex: 1;">Select English</div>
-  </div>
-  
-  <div id="tracksList" class="tracks-list" style="display: none;"></div>
-  
-  <button id="toggle" class="toggle-off">Enable Dual Subs</button>
-  <div id="logs" class="log">Ready to scan video...</div>
-  
-  <script src="popup.js"></script>
-</body>
-</html> -->
-
-<!--  -->
-<!-- <!DOCTYPE html>
-<html>
-<head>
-  <style>
-    body { width: 300px; padding: 15px; font-family: system-ui; }
-    .status { padding: 8px; margin: 5px 0; border-radius: 4px; font-weight: bold; }
-    .active { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
-    .inactive { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
-    .log { background: #f8f9fa; padding: 6px; font-size: 12px; max-height: 200px; overflow-y: auto; border-radius: 4px; }
-    button { width: 100%; padding: 10px; margin: 5px 0; border: none; border-radius: 4px; cursor: pointer; }
-    .toggle-on { background: #28a745; color: white; }
-    .toggle-off { background: #6c757d; color: white; }
-  </style>
-</head>
-<body>
-  <h3>🅳🆄🅰🅻 🆂🆄🅱🆂</h3>
-  <div id="status" class="status inactive">Not Active</div>
-  <div id="tracks">Tracks: None detected</div>
-  <button id="toggle" class="toggle-off">Enable Dual Subs</button>
-  <div id="logs" class="log">No logs yet...</div>
-  <script src="popup.js"></script>
-</body>
-</html> -->

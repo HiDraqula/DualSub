@@ -1,7 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Dual Subs",
-  "version": "1.0",
+  "version": "2.0",
+  "description": "Dual subtitles for net20.cc - displays 2 subtitle tracks simultaneously",
   "action": {
     "default_popup": "popup.html",
     "default_title": "Dual Subs Status"
@@ -10,7 +11,7 @@
     {
       "matches": ["https://net20.cc/*"],
       "exclude_matches": ["https://net20.cc/verify*"],
-      "js": ["content.js"],
+      "js": ["iframe-subs.js", "content.js"],
       "all_frames": true
     }
   ],
@@ -22,12 +23,19 @@
     "storage",
     "webRequest",
     "webRequestBlocking",
-    "<all_urls>"
+    "downloads"
+  ],
+  "host_permissions": [
+    "https://net20.cc/*"
   ],
   "web_accessible_resources": [
     {
       "resources": ["iframe-subs.js"],
       "matches": ["https://net20.cc/*"]
     }
-  ]
+  ],
+  "icons": {
+    "48": "icon48.png",
+    "128": "icon128.png"
+  }
 }

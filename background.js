@@ -1,12 +1,13 @@
-chrome.webRequest.onHeadersReceived.addListener(
-  function(details) {
-    // Remove CORS headers from iframe responses
-    return {
-      responseHeaders: details.responseHeaders.filter(header => 
-        !['content-security-policy', 'x-frame-options'].includes(header.name.toLowerCase())
-      )
-    };
-  },
-  { urls: ["*://net20.cc/*"] },
-  ["blocking", "responseHeaders"]
-);
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request.action === 'downloadFile') {
+    chrome.downloads.download({
+      url: request.url,
+      filename: request.filename,
+      saveAs: true
+    }, (downloadId) => {
+      if (chrome.runtime.lastError) {
+        console.error('Download failed:', chrome.runtime.lastError);
+      }
+    });
+  }
+});
