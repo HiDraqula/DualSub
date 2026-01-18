@@ -1,0 +1,33 @@
+{
+  "manifest_version": 3,
+  "name": "Dual Subs",
+  "version": "1.0",
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Dual Subs Status"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://net20.cc/*"],
+      "exclude_matches": ["https://net20.cc/verify*"],
+      "js": ["content.js"],
+      "all_frames": true
+    }
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "permissions": [
+    "activeTab",
+    "storage",
+    "webRequest",
+    "webRequestBlocking",
+    "<all_urls>"
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["iframe-subs.js"],
+      "matches": ["https://net20.cc/*"]
+    }
+  ]
+}
