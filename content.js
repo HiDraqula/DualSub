@@ -1,325 +1,293 @@
-// Runs AUTOMATICALLY inside iframe when page loads
-(function() {
-  window.addEventListener('message', function(e) {
-    if (e.data.action === 'getTracks' && e.data.from === 'dual-subs-extension') {
-      const video = document.querySelector('video');
-      if (video && video.textTracks && video.textTracks.length > 0) {
-        const tracks = Array.from(video.textTracks).map((track, i) => ({
-          id: i,
-          label: track.label || `Track ${i+1}`,
-          language: track.language || 'unknown',
-          mode: track.mode
-        })).filter(t => t.mode !== 'disabled');
-        
-        e.source.postMessage({
-          action: 'tracksFound',
-          tracks: tracks
-        }, '*');
-        
-        console.log('iframe-subs: Found', tracks.length, 'subtitle tracks');
-      }
-    }
-  });
-})();
-
-let isEnabled = false;
 let status = {
   active: false,
-  tracks: {},
-  selectedTracks: { primary: null, secondary: null },
-  videoInfo: {},
   allTracks: [],
-  domInfo: { iframes: 0, videos: 0, iframesWithVideo: 0 },
+  selectedTracks: { primary: null, secondary: null },
+  domInfo: { iframes: 0, videos: 0 },
   logs: [],
-  htmlSnippet: "",
-  iframeMessageSent: false,
-  videoSource: null,
-  dualSubOverlay: null
+  video: null,
+  overlay: null,
 };
+let isEnabled = false;
 
-let checkInterval = null;
-
-// Remove CORS headers
-// chrome.webRequest.onHeadersReceived.addListener(
-//   function(details) {
-//     return {
-//       responseHeaders: details.responseHeaders.filter(header => 
-//         !['content-security-policy', 'x-frame-options'].includes(header.name.toLowerCase())
-//       )
-//     };
-//   },
-//   { urls: ["*://net20.cc/*"] },
-//   ["blocking", "responseHeaders"]
-// );
-
+// FIXED chrome.runtime.onMessage
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "getStatus") {
     sendResponse(status);
-  } else if (request.action === "deepScan") {
+    return true;
+  }
+  if (request.action === "deepScan") {
     deepScan();
     sendResponse({ success: true });
-  } else if (request.action === "toggleSubs") {
-    toggleDualSubs();
-    sendResponse({ success: true, enabled: isEnabled });
-  } else if (request.action === "selectTrack1") {
-    status.selectedTracks.primary = request.trackId;
-    updateDualSubs();
-    sendResponse(status);
-  } else if (request.action === "selectTrack2") {
-    status.selectedTracks.secondary = request.trackId;
-    updateDualSubs();
-    sendResponse(status);
-  } else if (request.action === "exportFullHtml") {
-    const fullHtml = document.documentElement.outerHTML;
-    status.htmlSnippet = fullHtml.substring(0, 10000) + `\n\n[... ${fullHtml.length - 10000} chars truncated]`;
-    downloadHtml('page-full.html', status.htmlSnippet);
-    sendResponse(status);
-  } else if (request.action === "exportIframeHtml") {
-    exportIframeHtml();
-    sendResponse(status);
+    return true;
+  }
+  if (request.action === "exportDebugJson") {
+    downloadFile("debug.json", JSON.stringify(status, null, 2));
+    sendResponse({ success: true });
+    return true;
+  }
+  if (request.action === "dumpHtml") {
+    const html = document.documentElement.outerHTML;
+    downloadFile("page.html", html);
+    sendResponse({ html });
+    return true;
+  }
+  if (request.action === "forceInject") {
+    chrome.runtime.sendMessage({ action: "forceInject" });
+    sendResponse({ success: true });
   }
 });
 
-function downloadHtml(filename, content) {
-  const blob = new Blob([content], { type: 'text/html' });
-  const url = URL.createObjectURL(blob);
-  chrome.runtime.sendMessage({
-    action: 'downloadFile',
-    filename: filename,
-    url: url
-  });
+// LISTEN FOR VIDEO REPORTS FROM OTHER FRAMES
+window.addEventListener("message", (e) => {
+  if (e.data.action === "VIDEO_REPORT" && e.data.tracks?.length > 0) {
+    status.allTracks = e.data.tracks;
+    status.video = { remote: true, id: e.data.videoId };
+    status.logs.push(`📡 Got ${e.data.tracks.length} tracks from iframe!`);
+    status.domInfo.videos = 1;
+    updateIndicator();
+  }
+});
+
+function downloadFile(filename, content) {
+  chrome.runtime.sendMessage({ action: "downloadFile", filename, url: URL.createObjectURL(new Blob([content], { type: "text/plain" })) });
 }
 
-function exportIframeHtml() {
-  const iframes = document.querySelectorAll("iframe");
-  let iframeInfo = "<html><body><h2>Iframe Analysis</h2>";
-  iframes.forEach((iframe, i) => {
-    iframeInfo += `<h3>IFRAME ${i}</h3>`;
-    iframeInfo += `<p>src: ${iframe.src}</p>`;
-    iframeInfo += `<p>width: ${iframe.offsetWidth}px, height: ${iframe.offsetHeight}px</p>`;
-    try {
-      const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
-      if (iframeDoc) {
-        iframeInfo += `<p>HTML: ${iframeDoc.body.innerHTML.substring(0, 1000)}...</p>`;
-      } else {
-        iframeInfo += `<p>HTML: CORS BLOCKED</p>`;
-      }
-    } catch (e) {
-      iframeInfo += `<p>HTML: ${e.message}</p>`;
-    }
+// NUCLEAR VIDEO FINDER - Works in ANY frame
+// function findVideoNucular(doc = document, path = '') {
+//   console.log(`🔍 Scanning ${path}`);
+
+//   // Direct video
+//   let video = doc.querySelector('video');
+//   if (video) {
+//     status.logs.push(`🎥 VIDEO FOUND: ${path}`);
+//     forceEnableTracks(video);
+//     status.video = video;
+//     extractTracks(video);
+//     createOverlayInContext(doc);
+//     return video;
+//   }
+
+//   // All iframes
+//   const iframes = doc.querySelectorAll('iframe');
+//   status.domInfo.iframes += iframes.length;
+
+//   for(let i = 0; i < iframes.length; i++) {
+//     try {
+//       const iframeDoc = iframes[i].contentDocument || iframes[i].contentWindow?.document;
+//       if (iframeDoc) {
+//         const foundVideo = findVideoNucular(iframeDoc, `${path}iframe-${i}/`);
+//         if (foundVideo) return foundVideo;
+//       }
+//     } catch(e) {
+//       status.logs.push(`iframe-${i}: CORS BLOCKED (expected)`);
+//     }
+//   }
+//   return null;
+// }
+
+// function forceEnableTracks(video) {
+//   if (!video.textTracks) return;
+//   for(let i = 0; i < video.textTracks.length; i++) {
+//     video.textTracks[i].mode = 'showing';
+//   }
+//   status.logs.push(`✅ Forced ${video.textTracks.length} tracks to SHOWING`);
+// }
+
+function extractTracks(video) {
+  if (!video.textTracks?.length) return;
+  status.allTracks = Array.from(video.textTracks).map((track, i) => ({
+    id: i,
+    label: track.label || `Track ${i + 1}`,
+    language: track.language || "unknown",
+    mode: track.mode,
+  }));
+  status.domInfo.videos = 1;
+  status.logs.push(`🎉 Extracted ${status.allTracks.length} tracks`);
+}
+
+function createOverlayInContext(doc) {
+  if (status.overlay) return;
+  status.overlay = doc.createElement("div");
+  status.overlay.id = "dual-subs-overlay";
+  Object.assign(status.overlay.style, {
+    position: "absolute",
+    bottom: "25%",
+    left: "50%",
+    transform: "translateX(-50%)",
+    maxWidth: "95%",
+    zIndex: "2147483647",
+    pointerEvents: "none",
+    background: "rgba(0,0,0,0.9)",
+    color: "#ffff00",
+    padding: "20px 25px",
+    borderRadius: "15px",
+    fontSize: "32px",
+    fontWeight: "bold",
+    textShadow: "2px 2px 4px black",
+    textAlign: "center",
+    minHeight: "70px",
   });
-  iframeInfo += "</body></html>";
-  downloadHtml('iframes.html', iframeInfo);
+  (doc.querySelector("video")?.parentElement || doc.body).appendChild(status.overlay);
 }
 
 function createIndicator() {
-  if (document.querySelector("#dual-subs-indicator")) return;
+  if (document.getElementById("dual-subs-indicator")) return;
   const indicator = document.createElement("div");
   indicator.id = "dual-subs-indicator";
   Object.assign(indicator.style, {
-    position: "fixed", top: "10px", right: "10px", minWidth: "200px", minHeight: "24px",
-    background: "rgba(0, 123, 255, 0.95)", color: "white", padding: "6px 10px",
-    borderRadius: "12px", fontSize: "11px", fontWeight: "600", zIndex: "1000000",
-    fontFamily: "-apple-system, system-ui, sans-serif", boxShadow: "0 2px 12px rgba(0,0,0,0.2)",
-    pointerEvents: "none", lineHeight: "1.2", textAlign: "center"
+    position: "fixed",
+    top: "10px",
+    right: "10px",
+    width: "260px",
+    height: "45px",
+    background: "rgba(0,123,255,0.95)",
+    color: "white",
+    borderRadius: "12px",
+    fontSize: "13px",
+    zIndex: "2147483647",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontWeight: "600",
+    boxShadow: "0 4px 20px rgba(0,0,0,0.4)",
   });
   document.body.appendChild(indicator);
-  return indicator;
 }
 
-function createDualSubOverlay() {
-  if (status.dualSubOverlay) return status.dualSubOverlay;
-  
-  const overlay = document.createElement('div');
-  overlay.id = 'dual-subs-overlay';
-  Object.assign(overlay.style, {
-    position: 'fixed', bottom: '10%', left: '50%', transform: 'translateX(-50%)',
-    maxWidth: '90%', zIndex: '1000001', pointerEvents: 'none',
-    fontFamily: '-apple-system, sans-serif', textShadow: '1px 1px 2px rgba(0,0,0,0.8)'
-  });
-  document.body.appendChild(overlay);
-  status.dualSubOverlay = overlay;
-  return overlay;
+function updateIndicator() {
+  const indicator = document.getElementById("dual-subs-indicator");
+  if (!indicator) return;
+
+  if (status.allTracks.length > 0) {
+    indicator.style.background = isEnabled ? "rgba(40,167,69,0.95)" : "rgba(0,123,255,0.95)";
+    indicator.textContent = `${status.allTracks.length} tracks | ${isEnabled ? "ON" : "OFF"}`;
+  } else {
+    indicator.style.background = "rgba(255,193,7,0.95)";
+    indicator.textContent = `🔍 ${status.domInfo.iframes} iframes, ${status.domInfo.videos} videos`;
+  }
 }
+
+// FIX iframe counting - reset before each scan
 
 function deepScan() {
-  status.domInfo = {
-    iframes: document.querySelectorAll("iframe").length,
-    videos: document.querySelectorAll("video").length,
-    iframesWithVideo: 0,
-    elementsWithTracks: 0
-  };
-  const iframes = document.querySelectorAll("iframe");
-  iframes.forEach((iframe, i) => {
+  status.logs = ["=== DEEP SCAN ==="];
+  status.domInfo = { iframes: document.querySelectorAll("iframe").length, videos: 0 };
+
+  // Try postMessage to ALL iframes
+  document.querySelectorAll("iframe").forEach((iframe, i) => {
     try {
-      const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
-      if (iframeDoc) {
-        const iframeVideos = iframeDoc.querySelectorAll("video");
-        status.domInfo.iframesWithVideo += iframeVideos.length;
-      }
+      iframe.contentWindow.postMessage(
+        {
+          action: "DUAL_SUBS_FIND_VIDEO",
+          from: "dual-subs",
+        },
+        "*",
+      );
+      status.logs.push(`📤 postMessage to iframe ${i}`);
     } catch (e) {
-      status.logs.push(`iframe-${i}: CORS blocked`);
+      status.logs.push(`iframe ${i}: message sent`);
     }
   });
-}
 
-function initDualSubs() {
-  const indicator = createIndicator();
-  if (!indicator) return false;
-  deepScan();
-
-  const iframe = document.querySelector("iframe");
-  if (iframe && !status.iframeMessageSent) {
-    try {
-      iframe.contentWindow.postMessage({
-        action: "getTracks",
-        from: "dual-subs-extension"
-      }, "*");
-      status.iframeMessageSent = true;
-      status.logs.push("📤 Sent postMessage to iframe");
-    } catch (e) {
-      status.logs.push("❌ postMessage error: " + e.message);
-    }
+  // Check local video
+  const video = document.querySelector("video");
+  if (video) {
+    status.logs.push("🎥 LOCAL VIDEO FOUND");
+    status.domInfo.videos = 1;
   }
 
-  let video = document.querySelector("video");
-  if (video?.textTracks?.length > 0) {
-    status.allTracks = Array.from(video.textTracks)
-      .map((t, i) => ({ id: i, label: t.label || `Track ${i+1}`, language: t.language || "unknown" }))
-      .filter(t => t.mode !== 'disabled');
-    status.videoSource = "main-video";
-    updateIndicator(indicator);
+  updateIndicator();
+}
+
+// FIXED recursive video finder - proper counting
+function findVideoNucular(doc = document, path = "", depth = 0) {
+  status.domInfo.nestedDepth = Math.max(status.domInfo.nestedDepth, depth);
+
+  // Count THIS frame's iframes
+  const iframes = Array.from(doc.querySelectorAll("iframe"));
+  status.domInfo.iframes += iframes.length;
+
+  // Look for video in THIS frame
+  const video = doc.querySelector("video");
+  if (video) {
+    status.domInfo.videos++;
+    status.domInfo.iframesWithVideo++;
+    status.logs.push(`🎥 VIDEO FOUND: ${path} (${video.videoWidth}x${video.videoHeight})`);
+
+    forceEnableTracks(video);
+    status.video = video;
+    extractTracks(video);
+    createOverlayInContext(doc);
     return true;
   }
 
-  const iframes = document.querySelectorAll("iframe");
+  // Recursively check child iframes (NO CORS TRY-CATCH needed here)
   for (let iframe of iframes) {
+    status.logs.push(`📦 Checking ${path}iframe-${iframes.indexOf(iframe)}`);
+    // postMessage to blocked iframes instead of trying CORS access
     try {
-      const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
-      if (iframeDoc) {
-        video = iframeDoc.querySelector("video");
-        if (video?.textTracks?.length > 0) {
-          status.allTracks = Array.from(video.textTracks)
-            .map((t, i) => ({ id: i, label: t.label || `Track ${i+1}`, language: t.language || "unknown" }))
-            .filter(t => t.mode !== 'disabled');
-          status.videoSource = "iframe-direct";
-          updateIndicator(indicator);
-          return true;
-        }
-      }
-    } catch (e) {}
+      iframe.contentWindow.postMessage(
+        {
+          action: "DUAL_SUBS_FIND_VIDEO",
+          from: "content-script",
+        },
+        "*",
+      );
+    } catch (e) {
+      status.logs.push(`🔒 iframe-${iframes.indexOf(iframe)}: postMessage sent`);
+    }
   }
-  updateIndicator(indicator, false);
-  return status.allTracks.length > 0;
-}
 
-function updateIndicator(indicator, hasTracks = true) {
-  if (hasTracks && status.allTracks.length) {
-    indicator.style.background = status.active ? "rgba(40, 167, 69, 0.95)" : "rgba(0, 123, 255, 0.95)";
-    indicator.textContent = `${status.allTracks.length} tracks | ${status.active ? 'ON' : 'OFF'}`;
-  } else {
-    indicator.style.background = "rgba(255, 193, 7, 0.95)";
-    indicator.textContent = `🔍 ${status.domInfo.iframes} iframes, ${status.domInfo.videos} videos`;
-  }
+  return false;
 }
 
 function toggleDualSubs() {
   isEnabled = !isEnabled;
   status.active = isEnabled;
-  if (isEnabled) {
+  if (isEnabled && status.video && status.allTracks.length >= 2) {
     startDualSubs();
   } else {
     stopDualSubs();
   }
+  updateIndicator();
 }
 
+let rafId;
 function startDualSubs() {
-  if (status.allTracks.length < 2) return;
-  const overlay = createDualSubOverlay();
-  overlay.innerHTML = '';
-  
-  // Listen for track changes
-  window.addEventListener('message', handleTrackUpdate);
-  const video = document.querySelector('video') || getIframeVideo();
-  if (video) {
-    video.addEventListener('timeupdate', updateDualDisplay);
-    status.videoInfo.currentVideo = video;
+  function updateDisplay() {
+    if (!status.video || !status.overlay || status.allTracks.length < 2) return;
+
+    const primaryId = status.selectedTracks.primary ?? 0;
+    const secondaryId = status.selectedTracks.secondary ?? 1;
+
+    const primaryCue = status.video.textTracks[primaryId]?.activeCues?.[0]?.text || "";
+    const secondaryCue = status.video.textTracks[secondaryId]?.activeCues?.[0]?.text || "";
+
+    status.overlay.innerHTML = `
+      <div style="font-size:24px;color:#ccc;margin-bottom:10px;opacity:${secondaryCue ? 0.9 : 0};font-weight:normal;">
+        ${secondaryCue}
+      </div>
+      <div style="font-size:36px;color:#ffff00;opacity:${primaryCue ? 1 : 0};">
+        ${primaryCue}
+      </div>
+    `;
+    rafId = requestAnimationFrame(updateDisplay);
   }
+  rafId = requestAnimationFrame(updateDisplay);
 }
 
 function stopDualSubs() {
-  if (status.dualSubOverlay) {
-    status.dualSubOverlay.innerHTML = '';
-  }
-  window.removeEventListener('message', handleTrackUpdate);
-  if (status.videoInfo.currentVideo) {
-    status.videoInfo.currentVideo.removeEventListener('timeupdate', updateDualDisplay);
-  }
+  if (rafId) cancelAnimationFrame(rafId);
+  if (status.overlay) status.overlay.innerHTML = "";
 }
 
-function updateDualDisplay() {
-  if (!isEnabled || !status.dualSubOverlay) return;
-  
-  const primaryTrack = status.selectedTracks.primary !== null ? 
-    status.allTracks[status.selectedTracks.primary] : status.allTracks[0];
-  const secondaryTrack = status.selectedTracks.secondary !== null ? 
-    status.allTracks[status.selectedTracks.secondary] : status.allTracks[1];
-  
-  if (!primaryTrack || !secondaryTrack) return;
-  
-  const video = status.videoInfo.currentVideo || document.querySelector('video');
-  if (!video || !video.textTracks) return;
-  
-  const primaryCue = getActiveCue(video.textTracks[primaryTrack.id]);
-  const secondaryCue = getActiveCue(video.textTracks[secondaryTrack.id]);
-  
-  status.dualSubOverlay.innerHTML = `
-    <div style="color: white; font-size: 24px; padding: 8px 12px; background: rgba(0,0,0,0.7); margin-bottom: 4px; border-radius: 4px;">
-      ${secondaryCue || ''}
-    </div>
-    <div style="color: yellow; font-size: 28px; font-weight: bold; padding: 12px 16px; background: rgba(0,0,0,0.8); border-radius: 6px;">
-      ${primaryCue || ''}
-    </div>
-  `;
-}
-
-function getActiveCue(track) {
-  if (!track || track.mode !== 'showing') return '';
-  const activeCues = track.activeCues;
-  return activeCues && activeCues.length > 0 ? activeCues[0].text : '';
-}
-
-function getIframeVideo() {
-  const iframe = document.querySelector('iframe');
-  if (iframe && iframe.contentDocument) {
-    return iframe.contentDocument.querySelector('video');
-  }
-  return null;
-}
-
-function updateDualSubs() {
-  if (isEnabled) {
-    stopDualSubs();
-    startDualSubs();
-  }
-}
-
-// Initialize
+// INIT - Run every 2 seconds
 setTimeout(() => {
-  chrome.storage.sync.get("dualSubsEnabled").then((result) => {
-    isEnabled = result.dualSubsEnabled || false;
-    status.active = isEnabled;
-  });
-  
-  checkInterval = setInterval(initDualSubs, 1000);
-  document.addEventListener("fullscreenchange", initDualSubs);
-  
-  const observer = new MutationObserver(initDualSubs);
-  observer.observe(document.body, { childList: true, subtree: false });
-  
-  setInterval(() => {
-    if (!status.allTracks.length) status.iframeMessageSent = false;
-  }, 5000);
-}, 300);
-
-Object.defineProperty(window, "devtools", { value: false, writable: false });
+  deepScan(); // Initial scan
+  setInterval(deepScan, 3000); // Every 3 seconds instead of 2
+}, 1500);
+setTimeout(() => {
+  // Also run on DOM changes
+  const observer = new MutationObserver(deepScan);
+  observer.observe(document.body || document.documentElement, { childList: true, subtree: true });
+}, 1000);

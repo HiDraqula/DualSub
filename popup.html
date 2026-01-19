@@ -1,54 +1,137 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
-<head>
-  <meta charset="UTF-8">
-  <style>
-    * { box-sizing: border-box; }
-    body { 
-      width: 360px; padding: 15px; margin: 0; 
-      font-family: -apple-system, Segoe UI, sans-serif; 
-      font-size: 13px; line-height: 1.4;
-    }
-    h3 { margin: 0 0 20px 0; text-align: center; font-size: 18px; font-weight: 600; color: #333; }
-    .status { padding: 12px; margin: 8px 0; border-radius: 8px; font-weight: 600; text-align: center; }
-    .active { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
-    .ready { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
-    .scan { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
-    .debug-info { background: #f8f9fa; padding: 12px; border-radius: 8px; font-size: 12px; margin: 12px 0; }
-    button { width: 100%; padding: 12px; margin: 6px 0; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px; }
-    .toggle-on { background: #28a745; color: white; }
-    .toggle-off { background: #6c757d; color: white; }
-    .debug-btn { background: #007bff; color: white; }
-    .log { background: #343a40; color: #e9ecef; padding: 12px; font-size: 11px; border-radius: 8px; max-height: 140px; overflow-y: auto; white-space: pre-wrap; font-family: 'Courier New', monospace; }
-    .track-select { display: flex; gap: 8px; margin: 12px 0; }
-    .track-btn { flex: 1; padding: 12px; text-align: center; background: #f8f9fa; border: 1px solid #dee2e6; font-size: 13px; cursor: pointer; border-radius: 8px; }
-    .track-btn:hover { background: #e9ecef; }
-  </style>
-</head>
-<body>
-  <h3>Dual Subs</h3>
-  
-  <div id="status" class="status ready">Loading page analysis...</div>
-  
-  <div id="debugInfo" class="debug-info" style="display: none;">
-    <strong>Page Structure:</strong> <span id="domScan">-</span><br>
-    <strong>Iframes:</strong> <span id="iframeCount">0</span> | 
-    <strong>Videos:</strong> <span id="videoCount">0</span><br>
-    <strong>Tracks:</strong> <span id="trackCount">0</span>
-  </div>
-  
-  <div class="track-select">
-    <div id="track1" class="track-btn">Track 1: None (click)</div>
-    <div id="track2" class="track-btn">Track 2: None (click)</div>
-  </div>
-  
-  <button id="scanDeep" class="debug-btn">Deep Scan Iframes</button>
-  <button id="exportFull" class="debug-btn">Export FULL HTML</button>
-  <button id="exportIframe" class="debug-btn">Export Iframe HTML</button>
-  <button id="toggleSubs" class="toggle-off">Enable Dual Subs</button>
-  
-  <div id="logs" class="log">Ready - Click Deep Scan to analyze iframes</div>
-  
-  <script src="popup.js"></script>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        width: 360px;
+        padding: 15px;
+        margin: 0;
+        font-family:
+          -apple-system,
+          Segoe UI,
+          sans-serif;
+        font-size: 13px;
+        line-height: 1.4;
+      }
+      h3 {
+        margin: 0 0 20px 0;
+        text-align: center;
+        font-size: 18px;
+        font-weight: 600;
+        color: #333;
+      }
+      .status {
+        padding: 12px;
+        margin: 8px 0;
+        border-radius: 8px;
+        font-weight: 600;
+        text-align: center;
+      }
+      .active {
+        background: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+      }
+      .ready {
+        background: #d1ecf1;
+        color: #0c5460;
+        border: 1px solid #bee5eb;
+      }
+      .scan {
+        background: #fff3cd;
+        color: #856404;
+        border: 1px solid #ffeaa7;
+      }
+      .debug-info {
+        background: #f8f9fa;
+        padding: 12px;
+        border-radius: 8px;
+        font-size: 12px;
+        margin: 12px 0;
+      }
+      button {
+        width: 100%;
+        padding: 12px;
+        margin: 6px 0;
+        border: none;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        font-size: 14px;
+      }
+      .toggle-on {
+        background: #28a745;
+        color: white;
+      }
+      .toggle-off {
+        background: #6c757d;
+        color: white;
+      }
+      .debug-btn {
+        background: #007bff;
+        color: white;
+      }
+      .log {
+        background: #343a40;
+        color: #e9ecef;
+        padding: 12px;
+        font-size: 11px;
+        border-radius: 8px;
+        max-height: 140px;
+        overflow-y: auto;
+        white-space: pre-wrap;
+        font-family: "Courier New", monospace;
+      }
+      .track-select {
+        display: flex;
+        gap: 8px;
+        margin: 12px 0;
+      }
+      .track-btn {
+        flex: 1;
+        padding: 12px;
+        text-align: center;
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        font-size: 13px;
+        cursor: pointer;
+        border-radius: 8px;
+      }
+      .track-btn:hover {
+        background: #e9ecef;
+      }
+    </style>
+  </head>
+  <body>
+    <h3>Dual Subs</h3>
+
+    <div id="status" class="status ready">Loading page analysis...</div>
+
+    <div id="debugInfo" class="debug-info" style="display: none">
+      <strong>Page Structure:</strong> <span id="domScan">-</span><br />
+      <strong>Iframes:</strong> <span id="iframeCount">0</span> | <strong>Videos:</strong> <span id="videoCount">0</span><br />
+      <strong>Tracks:</strong> <span id="trackCount">0</span>
+    </div>
+
+    <div class="track-select">
+      <div id="track1" class="track-btn">Track 1: None (click)</div>
+      <div id="track2" class="track-btn">Track 2: None (click)</div>
+    </div>
+
+    <button id="scanDeep" class="debug-btn">Deep Scan</button>
+    <button id="dumpHtml" class="debug-btn">📄 Dump FULL HTML</button>
+    <button id="forceInject" class="debug-btn">💉 Force Inject</button>
+    <button id="exportDebug" class="debug-btn">📋 Export JSON</button>
+    <button id="exportFull" class="debug-btn">Export FULL HTML</button>
+    <button id="exportIframe" class="debug-btn">Export Iframe HTML</button>
+    <button id="toggleSubs" class="toggle-off">Enable Dual Subs</button>
+
+    <div id="logs" class="log">Ready - Click Deep Scan to analyze iframes</div>
+
+    <script src="popup.js"></script>
+  </body>
 </html>
